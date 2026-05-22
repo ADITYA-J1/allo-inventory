@@ -3,18 +3,21 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
+type ReservationStatus = "PENDING" | "CONFIRMED" | "RELEASED";
+
 interface ReservationActionsProps {
   id: string;
-  status: "PENDING" | "CONFIRMED" | "RELEASED";
+  status: ReservationStatus;
   expiresAt: string;
+  onStatusChange: (status: ReservationStatus) => void;
 }
 
 export function ReservationActions({
   id,
-  status: initialStatus,
+  status,
   expiresAt,
+  onStatusChange,
 }: ReservationActionsProps) {
-  const [status, setStatus] = useState(initialStatus);
   const [loading, setLoading] = useState<"confirm" | "release" | null>(null);
   const [expired, setExpired] = useState(
     () => new Date(expiresAt).getTime() <= Date.now()
@@ -43,7 +46,7 @@ export function ReservationActions({
       });
 
       if (res.ok) {
-        setStatus("CONFIRMED");
+        onStatusChange("CONFIRMED");
         toast.success("Purchase confirmed!");
         return;
       }
@@ -71,7 +74,7 @@ export function ReservationActions({
       });
 
       if (res.ok) {
-        setStatus("RELEASED");
+        onStatusChange("RELEASED");
         toast.success("Reservation cancelled");
         return;
       }

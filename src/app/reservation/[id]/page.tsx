@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { ReservationCountdown } from "@/components/reservation-countdown";
-import { ReservationActions } from "@/components/reservation-actions";
+import { ReservationDetailClient } from "@/components/reservation-detail-client";
 
 interface ReservationData {
   id: string;
@@ -46,27 +45,6 @@ async function getReservation(id: string): Promise<ReservationData | null> {
   };
 }
 
-function StatusBadge({ status }: { status: string }) {
-  const styles: Record<string, string> = {
-    PENDING:
-      "bg-amber-50 text-amber-700 ring-amber-600/20",
-    CONFIRMED:
-      "bg-emerald-50 text-emerald-700 ring-emerald-600/20",
-    RELEASED:
-      "bg-zinc-100 text-zinc-500 ring-zinc-500/20",
-  };
-
-  return (
-    <span
-      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${
-        styles[status] || styles.RELEASED
-      }`}
-    >
-      {status}
-    </span>
-  );
-}
-
 export default async function ReservationPage({
   params,
 }: {
@@ -106,68 +84,17 @@ export default async function ReservationPage({
           ← Back to Inventory
         </Link>
 
-        <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex items-start justify-between">
-            <div>
-              <h1 className="text-xl font-semibold text-zinc-900">
-                {reservation.product.name}
-              </h1>
-              <p className="mt-0.5 font-[family-name:var(--font-geist-mono)] text-xs text-zinc-400">
-                {reservation.product.sku}
-              </p>
-            </div>
-            <StatusBadge status={reservation.status} />
-          </div>
-
-          <div className="mt-6 divide-y divide-zinc-100">
-            <div className="flex justify-between py-3">
-              <span className="text-sm text-zinc-500">Warehouse</span>
-              <span className="text-sm font-medium text-zinc-900">
-                {reservation.warehouse.name}
-              </span>
-            </div>
-            <div className="flex justify-between py-3">
-              <span className="text-sm text-zinc-500">Quantity</span>
-              <span className="text-sm font-medium text-zinc-900">
-                {reservation.quantity}
-              </span>
-            </div>
-            <div className="flex justify-between py-3">
-              <span className="text-sm text-zinc-500">Created</span>
-              <span className="text-sm font-medium text-zinc-900">
-                {new Date(reservation.createdAt).toLocaleString()}
-              </span>
-            </div>
-            {reservation.confirmedAt && (
-              <div className="flex justify-between py-3">
-                <span className="text-sm text-zinc-500">Confirmed</span>
-                <span className="text-sm font-medium text-emerald-700">
-                  {new Date(reservation.confirmedAt).toLocaleString()}
-                </span>
-              </div>
-            )}
-            {reservation.releasedAt && (
-              <div className="flex justify-between py-3">
-                <span className="text-sm text-zinc-500">Released</span>
-                <span className="text-sm font-medium text-zinc-500">
-                  {new Date(reservation.releasedAt).toLocaleString()}
-                </span>
-              </div>
-            )}
-          </div>
-
-          <div className="mt-6 space-y-4">
-            <ReservationCountdown
-              expiresAt={reservation.expiresAt}
-              status={reservation.status}
-            />
-            <ReservationActions
-              id={reservation.id}
-              status={reservation.status}
-              expiresAt={reservation.expiresAt}
-            />
-          </div>
-        </div>
+        <ReservationDetailClient
+          id={reservation.id}
+          initialStatus={reservation.status}
+          expiresAt={reservation.expiresAt}
+          confirmedAt={reservation.confirmedAt}
+          releasedAt={reservation.releasedAt}
+          createdAt={reservation.createdAt}
+          product={reservation.product}
+          warehouse={reservation.warehouse}
+          quantity={reservation.quantity}
+        />
 
         <p className="mt-6 text-center text-xs text-zinc-400">
           Reservation ID: {reservation.id}

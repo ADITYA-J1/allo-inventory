@@ -42,15 +42,18 @@ statement. When two requests arrive simultaneously for the last unit:
 No application-level race condition is possible. The guarantee lives entirely
 inside Postgres.
 
+The implementation was validated by forcing inventory availability to a single
+unit and issuing simultaneous reservation requests from multiple clients. Exactly
+one request succeeded while the other returned HTTP 409 Conflict.
+
 ### Expiry Mechanism
 
-A Vercel Cron job runs `/api/cron/expire-reservations` every minute. It finds
-all `PENDING` reservations past their `expiresAt`, sets them to `RELEASED`, and
-decrements `Stock.reserved` — all inside a single Prisma transaction for
-consistency.
-
-On the client, the countdown runs via `setInterval`. When it hits zero, the UI
-disables action buttons immediately — the user never needs to wait for the cron.
+A Vercel Cron job periodically calls `/api/cron/expire-reservations` to release
+expired reservations and decrement reserved stock. Due to hobby-tier compute
+constraints, the cron is currently configured to run daily at midnight instead of
+every minute. To avoid poor UX during the gap window, the system also implements
+lazy expiry checks during confirm/release operations and disables actions
+client-side when the countdown reaches zero.
 
 ### Idempotency (Bonus)
 
@@ -58,6 +61,17 @@ disables action buttons immediately — the user never needs to wait for the cro
 serialised response are stored in Upstash Redis with a 24-hour TTL. Retries
 with the same key return the original response without re-executing the side
 effect — safe for clients on flaky connections.
+
+---
+
+## Reservation Lifecycle
+
+```
+PENDING
+  → CONFIRMED  (user confirms purchase)
+  → RELEASED   (user cancels)
+  → RELEASED   (expiry cleanup via cron or lazy check on confirm/release)
+```
 
 ---
 

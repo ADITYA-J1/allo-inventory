@@ -28,48 +28,48 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // THE CORE CONCURRENCY-SAFE PATTERN
-    // SELECT ... FOR UPDATE acquires a row-level lock on the Stock row.
-    // The check and the update happen in one atomic SQL statement.
-    // Two simultaneous requests for the last unit: one gets the lock,
-    // the other waits. When the second evaluates the WHERE clause,
-    // reserved has already been incremented — it fails cleanly → 409.
-    const result = await prisma.$queryRaw<{ success: boolean }[]>`
-      WITH locked AS (
-        SELECT id, total, reserved
-        FROM "Stock"
-        WHERE "productId" = ${productId}
-          AND "warehouseId" = ${warehouseId}
-        FOR UPDATE
-      ),
-      updated AS (
-        UPDATE "Stock"
-        SET reserved = reserved + ${quantity}
-        FROM locked
-        WHERE "Stock".id = locked.id
-          AND (locked.total - locked.reserved) >= ${quantity}
-        RETURNING "Stock".id
-      )
-      SELECT EXISTS (SELECT 1 FROM updated) AS success
-    `;
+    // CONCURRENCY-SAFE RESERVATION
+    // Uses a Serializable interactive transaction via Prisma.
+    // Serializable isolation ensures that if two requests read the same
+    // stock row simultaneously, only one will commit — the other will
+    // be aborted by Postgres with a serialization failure, which Prisma
+    // surfaces as an error. This replaces the previous $queryRaw
+    // FOR UPDATE approach that was incompatible with Supabase's
+    // PgBouncer transaction pooler.
+    const reservation = await prisma.$transaction(
+      async (tx) => {
+        const stock = await tx.stock.findUnique({
+          where: {
+            productId_warehouseId: { productId, warehouseId },
+          },
+        });
 
-    if (!result[0]?.success) {
-      return NextResponse.json(
-        { error: "Not enough stock available in this warehouse" },
-        { status: 409 }
-      );
-    }
+        if (!stock || stock.total - stock.reserved < quantity) {
+          throw new Error("INSUFFICIENT_STOCK");
+        }
 
-    const reservation = await prisma.reservation.create({
-      data: {
-        productId,
-        warehouseId,
-        quantity,
-        expiresAt: new Date(Date.now() + 10 * 60 * 1000),
-        idempotencyKey: idempotencyKey ?? undefined,
+        await tx.stock.update({
+          where: {
+            productId_warehouseId: { productId, warehouseId },
+          },
+          data: { reserved: { increment: quantity } },
+        });
+
+        return tx.reservation.create({
+          data: {
+            productId,
+            warehouseId,
+            quantity,
+            expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+            idempotencyKey: idempotencyKey ?? undefined,
+          },
+          include: { product: true, warehouse: true },
+        });
       },
-      include: { product: true, warehouse: true },
-    });
+      {
+        isolationLevel: "Serializable",
+      }
+    );
 
     // Cache for idempotency
     if (idempotencyKey) {
@@ -82,9 +82,15 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(reservation, { status: 201 });
   } catch (err) {
-    console.error("Reservation error:", err);
+    if (String(err).includes("INSUFFICIENT_STOCK")) {
+      return NextResponse.json(
+        { error: "Not enough stock available in this warehouse" },
+        { status: 409 }
+      );
+    }
+    console.error("[POST /api/reservations] Error:", err);
     return NextResponse.json(
-      { error: "Internal server error" },
+      { error: "Internal server error", detail: String(err) },
       { status: 500 }
     );
   }

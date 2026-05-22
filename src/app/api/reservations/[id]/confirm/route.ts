@@ -20,6 +20,25 @@ export async function POST(
     }
 
     if (reservation.status !== "PENDING" || reservation.expiresAt < new Date()) {
+      if (reservation.status === "PENDING" && reservation.expiresAt < new Date()) {
+        // Lazy expiry: release the stock since it's expired
+        await prisma.$transaction(async (tx) => {
+          await tx.reservation.update({
+            where: { id },
+            data: { status: "RELEASED", releasedAt: new Date() },
+          });
+          await tx.stock.update({
+            where: {
+              productId_warehouseId: {
+                productId: reservation.productId,
+                warehouseId: reservation.warehouseId,
+              },
+            },
+            data: { reserved: { decrement: reservation.quantity } },
+          });
+        });
+      }
+
       return NextResponse.json(
         { error: "Reservation has expired" },
         { status: 410 }

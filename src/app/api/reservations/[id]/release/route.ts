@@ -26,6 +26,30 @@ export async function POST(
       );
     }
 
+    if (reservation.expiresAt < new Date()) {
+      // Lazy expiry
+      await prisma.$transaction(async (tx) => {
+        await tx.reservation.update({
+          where: { id },
+          data: { status: "RELEASED", releasedAt: new Date() },
+        });
+        await tx.stock.update({
+          where: {
+            productId_warehouseId: {
+              productId: reservation.productId,
+              warehouseId: reservation.warehouseId,
+            },
+          },
+          data: { reserved: { decrement: reservation.quantity } },
+        });
+      });
+      return NextResponse.json(
+        { error: "Reservation has expired" },
+        { status: 410 }
+      );
+    }
+
+
     const updated = await prisma.$transaction(async (tx) => {
       const updatedReservation = await tx.reservation.update({
         where: { id },

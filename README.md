@@ -63,8 +63,7 @@ effect — safe for clients on flaky connections.
 
 ## Trade-offs
 
-- **Cron granularity**: The 1-minute cron means a reservation can linger up to
-  ~60s past expiry. Acceptable here; lazy expiry on read would close the gap.
+- **Cron granularity & Lazy Expiry**: The cron is configured to run daily at midnight instead of every minute to reduce compute costs. To compensate, we implemented **lazy expiry**: if a user tries to confirm or release an expired reservation, the API detects it, releases the stock immediately, and returns a 410 response. The client-side countdown also hits zero and disables UI actions without waiting for the cron. The only gap is that expired reservations won't release their stock back to the pool until midnight if no one touches them. For a take-home exercise, this is an acceptable trade-off between strict consistency and platform limits.
 - **Optimistic UI**: State updates after confirm/release are currently driven by
   the API response. With more time I'd add optimistic updates via SWR.
 - **DB lock vs Redis lock**: I chose `FOR UPDATE` over a Redis distributed lock

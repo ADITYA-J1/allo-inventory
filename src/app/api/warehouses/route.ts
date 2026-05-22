@@ -1,17 +1,11 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getWarehouses } from "@/lib/data";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const warehouses = await prisma.warehouse.findMany({
-      select: {
-        id: true,
-        name: true,
-        location: true,
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
+    const warehouses = await getWarehouses();
     return NextResponse.json(warehouses);
   } catch (err) {
     console.error("Failed to fetch warehouses:", err);

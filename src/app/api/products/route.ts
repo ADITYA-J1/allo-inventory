@@ -1,35 +1,12 @@
 import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { getProducts } from "@/lib/data";
+
+export const dynamic = "force-dynamic";
 
 export async function GET() {
   try {
-    const products = await prisma.product.findMany({
-      include: {
-        stock: {
-          include: {
-            warehouse: true,
-          },
-        },
-      },
-      orderBy: { createdAt: "asc" },
-    });
-
-    const result = products.map((product) => ({
-      id: product.id,
-      name: product.name,
-      description: product.description,
-      sku: product.sku,
-      createdAt: product.createdAt,
-      stock: product.stock.map((s) => ({
-        warehouseId: s.warehouseId,
-        warehouseName: s.warehouse.name,
-        total: s.total,
-        reserved: s.reserved,
-        available: s.total - s.reserved,
-      })),
-    }));
-
-    return NextResponse.json(result);
+    const products = await getProducts();
+    return NextResponse.json(products);
   } catch (err) {
     console.error("Failed to fetch products:", err);
     return NextResponse.json(

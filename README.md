@@ -1,6 +1,6 @@
 # Allo Inventory — Reservation System
 
-**Live:** https://allo-inventory.vercel.app
+**Live:** [https://allo-inventory.vercel.app](https://allo-inventory-app.vercel.app/)
 
 ---
 

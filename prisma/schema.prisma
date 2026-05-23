@@ -13,6 +13,8 @@ model Product {
   name         String
   description  String?
   sku          String        @unique
+  category     String?
+  price        Int?
   createdAt    DateTime      @default(now())
   stock        Stock[]
   reservations Reservation[]

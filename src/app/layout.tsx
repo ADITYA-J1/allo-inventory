@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { DM_Sans, Instrument_Serif, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const dmSans = DM_Sans({
+  variable: "--font-dm-sans",
+  subsets: ["latin"],
+});
+
+const instrumentSerif = Instrument_Serif({
+  variable: "--font-instrument-serif",
+  weight: "400",
+  style: "italic",
   subsets: ["latin"],
 });
 
@@ -16,7 +23,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Allo Inventory — Reservation System",
   description:
-    "Real-time inventory management and reservation system with concurrency-safe stock locking.",
+    "Concurrency-safe inventory management and reservation system for multi-warehouse checkout flows.",
 };
 
 export default function RootLayout({
@@ -27,17 +34,23 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${dmSans.variable} ${instrumentSerif.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-zinc-50 text-zinc-900 font-[family-name:var(--font-geist-sans)]">
+      <body
+        className="min-h-full flex flex-col text-zinc-900"
+        style={{
+          fontFamily: "var(--font-dm-sans), sans-serif",
+          backgroundColor: "#FAFAF8",
+        }}
+      >
         {children}
         <Toaster
           position="bottom-right"
           toastOptions={{
             style: {
-              background: "#18181b",
+              background: "#1A4A3A",
               color: "#fafafa",
-              border: "1px solid #27272a",
+              border: "1px solid #245A48",
             },
           }}
         />

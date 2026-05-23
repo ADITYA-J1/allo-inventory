@@ -1,29 +1,15 @@
 import Link from "next/link";
 import { ReservationDetailClient } from "@/components/reservation-detail-client";
 
-interface ReservationData {
-  id: string;
-  productId: string;
-  warehouseId: string;
-  quantity: number;
-  status: "PENDING" | "CONFIRMED" | "RELEASED";
-  expiresAt: string;
-  confirmedAt: string | null;
-  releasedAt: string | null;
-  createdAt: string;
-  product: { name: string; sku: string };
-  warehouse: { name: string; location: string };
-}
-
 export const dynamic = "force-dynamic";
 
-async function getReservation(id: string): Promise<ReservationData | null> {
+async function getReservation(id: string) {
   const { prisma } = await import("@/lib/prisma");
 
   const reservation = await prisma.reservation.findUnique({
     where: { id },
     include: {
-      product: { select: { name: true, sku: true } },
+      product: { select: { name: true, sku: true, category: true, price: true } },
       warehouse: { select: { name: true, location: true } },
     },
   });
@@ -35,7 +21,7 @@ async function getReservation(id: string): Promise<ReservationData | null> {
     productId: reservation.productId,
     warehouseId: reservation.warehouseId,
     quantity: reservation.quantity,
-    status: reservation.status,
+    status: reservation.status as "PENDING" | "CONFIRMED" | "RELEASED",
     expiresAt: reservation.expiresAt.toISOString(),
     confirmedAt: reservation.confirmedAt?.toISOString() ?? null,
     releasedAt: reservation.releasedAt?.toISOString() ?? null,
@@ -64,8 +50,9 @@ export default async function ReservationPage({
             This reservation may have been removed or the link is invalid.
           </p>
           <Link
-            href="/"
-            className="mt-6 inline-flex items-center rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-800 transition-colors"
+            href="/inventory"
+            className="mt-6 inline-flex items-center rounded px-4 py-2 text-sm font-medium text-white transition-colors"
+            style={{ backgroundColor: "#1A4A3A" }}
           >
             ← Back to Inventory
           </Link>
@@ -76,10 +63,10 @@ export default async function ReservationPage({
 
   return (
     <main className="flex-1">
-      <div className="mx-auto max-w-lg px-4 py-12 sm:px-6">
+      <div className="mx-auto max-w-[520px] px-4 py-12 sm:px-6">
         <Link
-          href="/"
-          className="inline-flex items-center text-sm text-zinc-500 hover:text-zinc-700 transition-colors mb-8"
+          href="/inventory"
+          className="inline-flex items-center text-sm text-zinc-400 hover:text-zinc-600 transition-colors mb-8"
         >
           ← Back to Inventory
         </Link>
@@ -96,8 +83,8 @@ export default async function ReservationPage({
           quantity={reservation.quantity}
         />
 
-        <p className="mt-6 text-center text-xs text-zinc-400">
-          Reservation ID: {reservation.id}
+        <p className="mt-6 text-center font-mono text-[10px] text-zinc-400">
+          {reservation.id}
         </p>
       </div>
     </main>

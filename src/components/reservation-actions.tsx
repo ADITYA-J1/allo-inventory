@@ -90,14 +90,17 @@ export function ReservationActions({
 
   if (status === "CONFIRMED") {
     return (
-      <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-4 py-3">
+      <div
+        className="rounded px-4 py-3"
+        style={{ backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0" }}
+      >
         <div className="flex items-center gap-2">
           <svg
-            className="h-4 w-4 text-emerald-600"
+            className="h-4 w-4"
             fill="none"
             viewBox="0 0 24 24"
             strokeWidth={2}
-            stroke="currentColor"
+            stroke="#1A4A3A"
           >
             <path
               strokeLinecap="round"
@@ -105,7 +108,7 @@ export function ReservationActions({
               d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
             />
           </svg>
-          <p className="text-sm font-medium text-emerald-700">
+          <p className="text-sm font-medium" style={{ color: "#1A4A3A" }}>
             Purchase confirmed
           </p>
         </div>
@@ -115,7 +118,10 @@ export function ReservationActions({
 
   if (status === "RELEASED") {
     return (
-      <div className="rounded-lg bg-zinc-100 border border-zinc-200 px-4 py-3">
+      <div
+        className="rounded px-4 py-3"
+        style={{ backgroundColor: "#F4F4F5", border: "1px solid #E4E4E7" }}
+      >
         <p className="text-sm font-medium text-zinc-500">
           Reservation cancelled
         </p>
@@ -124,20 +130,21 @@ export function ReservationActions({
   }
 
   return (
-    <div className="flex gap-3">
+    <div className="space-y-2">
       <button
         onClick={handleConfirm}
         disabled={isDisabled}
-        className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full rounded px-4 py-2.5 text-sm font-medium text-white transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+        style={{ backgroundColor: "#1A4A3A" }}
       >
-        {loading === "confirm" ? "Confirming…" : "Confirm Purchase"}
+        {loading === "confirm" ? "Confirming…" : "Confirm purchase"}
       </button>
       <button
         onClick={handleRelease}
         disabled={isDisabled}
-        className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 shadow-sm transition-colors hover:bg-zinc-50 focus:outline-none focus:ring-2 focus:ring-zinc-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full text-sm text-zinc-400 hover:text-zinc-600 transition-colors py-1 disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        {loading === "release" ? "Cancelling…" : "Cancel"}
+        {loading === "release" ? "Cancelling…" : "Cancel reservation"}
       </button>
     </div>
   );

@@ -27,18 +27,17 @@ export function ReservationCountdown({
     return () => clearInterval(interval);
   }, [expiresAt, status]);
 
-  if (status === "CONFIRMED") {
-    return null;
-  }
-
-  if (status === "RELEASED") {
+  if (status === "CONFIRMED" || status === "RELEASED") {
     return null;
   }
 
   if (remaining <= 0) {
     return (
-      <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3">
-        <p className="text-sm font-medium text-red-700">
+      <div
+        className="rounded px-4 py-3"
+        style={{ backgroundColor: "#FEF2F2", border: "1px solid #FECACA" }}
+      >
+        <p className="text-sm font-medium" style={{ color: "#991B1B" }}>
           Reservation expired
         </p>
       </div>
@@ -52,34 +51,39 @@ export function ReservationCountdown({
     .toString()
     .padStart(2, "0")}`;
 
-  // Progress from 0 to 1 (1 = full time remaining)
-  const totalDuration = 10 * 60 * 1000; // 10 minutes
+  const totalDuration = 10 * 60 * 1000;
   const progress = Math.min(remaining / totalDuration, 1);
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <p className="text-xs font-medium text-zinc-400 uppercase tracking-wider">
-          Time Remaining
+        <p className="text-[11px] font-medium tracking-[0.15em] uppercase text-zinc-400">
+          Hold expires in
         </p>
-        <p className="font-[family-name:var(--font-geist-mono)] text-lg font-semibold text-zinc-900 tabular-nums">
+        <p className="font-mono text-xl font-semibold text-zinc-900 tabular-nums">
           {formatted}
         </p>
       </div>
-      <div className="h-1.5 w-full rounded-full bg-zinc-100 overflow-hidden">
+      <div
+        className="h-1 w-full rounded-full overflow-hidden"
+        style={{ backgroundColor: "#E8E8E4" }}
+      >
         <div
           className="h-full rounded-full transition-all duration-1000 ease-linear"
           style={{
             width: `${progress * 100}%`,
             backgroundColor:
               progress > 0.3
-                ? "#22c55e"
+                ? "#1A4A3A"
                 : progress > 0.1
-                ? "#f59e0b"
-                : "#ef4444",
+                ? "#D97706"
+                : "#DC2626",
           }}
         />
       </div>
+      <p className="text-xs text-zinc-400">
+        Stock is held for you. Confirm or it will release automatically.
+      </p>
     </div>
   );
 }

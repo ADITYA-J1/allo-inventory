@@ -15,6 +15,8 @@ export async function getProducts() {
     name: product.name,
     description: product.description,
     sku: product.sku,
+    category: product.category,
+    price: product.price,
     createdAt: product.createdAt,
     stock: product.stock.map((s) => ({
       warehouseId: s.warehouseId,
@@ -35,4 +37,12 @@ export async function getWarehouses() {
     },
     orderBy: { createdAt: "asc" },
   });
+}
+
+export function formatPrice(amount: number): string {
+  return new Intl.NumberFormat("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  }).format(amount);
 }

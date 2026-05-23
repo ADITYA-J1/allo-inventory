@@ -22,27 +22,33 @@ interface Product {
   stock: StockInfo[];
 }
 
-function StockDot({ available }: { available: number }) {
+function StockBadge({ available }: { available: number }) {
   if (available >= 10) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "#1A4A3A" }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "#1A4A3A" }} />
-        {available}
+      <span
+        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+        style={{ backgroundColor: "#F0FDF4", color: "#1A4A3A" }}
+      >
+        In Stock
       </span>
     );
   }
   if (available >= 1) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-medium" style={{ color: "#92400E" }}>
-        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "#92400E" }} />
-        {available}
+      <span
+        className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+        style={{ backgroundColor: "#FFFBEB", color: "#92400E" }}
+      >
+        Low Stock ({available})
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-medium line-through" style={{ color: "#991B1B" }}>
-      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: "#991B1B" }} />
-      0
+    <span
+      className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+      style={{ backgroundColor: "#FEF2F2", color: "#991B1B" }}
+    >
+      Out of Stock
     </span>
   );
 }
@@ -121,7 +127,7 @@ export function InventoryTable({ products }: { products: Product[] }) {
                           <span className="text-[10px] text-zinc-400">
                             {s.warehouseName.split(" ")[0]}
                           </span>
-                          <StockDot available={s.available} />
+                          <StockBadge available={s.available} />
                         </div>
                       ))}
                     </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { toast } from "sonner";
 
 type ReservationStatus = "PENDING" | "CONFIRMED" | "RELEASED";
@@ -90,41 +91,51 @@ export function ReservationActions({
 
   if (status === "CONFIRMED") {
     return (
-      <div
-        className="rounded px-4 py-3"
-        style={{ backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0" }}
-      >
-        <div className="flex items-center gap-2">
-          <svg
-            className="h-4 w-4"
-            fill="none"
-            viewBox="0 0 24 24"
-            strokeWidth={2}
-            stroke="#1A4A3A"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-            />
-          </svg>
-          <p className="text-sm font-medium" style={{ color: "#1A4A3A" }}>
-            Purchase confirmed
-          </p>
+      <div className="space-y-3">
+        <div
+          className="rounded px-4 py-3"
+          style={{ backgroundColor: "#F0FDF4", border: "1px solid #BBF7D0" }}
+        >
+          <div className="flex items-center gap-2">
+            <svg
+              className="h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth={2}
+              stroke="#1A4A3A"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+              />
+            </svg>
+            <p className="text-sm font-medium" style={{ color: "#1A4A3A" }}>
+              Purchase confirmed
+            </p>
+          </div>
         </div>
+        <Link href="/inventory" className="inline-flex items-center text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+          ← Back to Inventory
+        </Link>
       </div>
     );
   }
 
   if (status === "RELEASED") {
     return (
-      <div
-        className="rounded px-4 py-3"
-        style={{ backgroundColor: "#F4F4F5", border: "1px solid #E4E4E7" }}
-      >
-        <p className="text-sm font-medium text-zinc-500">
-          Reservation cancelled
-        </p>
+      <div className="space-y-3">
+        <div
+          className="rounded px-4 py-3"
+          style={{ backgroundColor: "#F4F4F5", border: "1px solid #E4E4E7" }}
+        >
+          <p className="text-sm font-medium text-zinc-500">
+            Reservation cancelled
+          </p>
+        </div>
+        <Link href="/inventory" className="inline-flex items-center text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+          ← Back to Inventory
+        </Link>
       </div>
     );
   }

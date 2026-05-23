@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 interface ReservationCountdownProps {
   expiresAt: string;
@@ -33,13 +34,18 @@ export function ReservationCountdown({
 
   if (remaining <= 0) {
     return (
-      <div
-        className="rounded px-4 py-3"
-        style={{ backgroundColor: "#FEF2F2", border: "1px solid #FECACA" }}
-      >
-        <p className="text-sm font-medium" style={{ color: "#991B1B" }}>
-          Reservation expired
-        </p>
+      <div className="space-y-3">
+        <div
+          className="rounded px-4 py-3"
+          style={{ backgroundColor: "#FEF2F2", border: "1px solid #FECACA" }}
+        >
+          <p className="text-sm font-medium" style={{ color: "#991B1B" }}>
+            Reservation expired
+          </p>
+        </div>
+        <Link href="/inventory" className="inline-flex items-center text-xs text-zinc-400 hover:text-zinc-600 transition-colors">
+          ← Back to Inventory
+        </Link>
       </div>
     );
   }

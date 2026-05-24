@@ -75,10 +75,9 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* Footer */}
       <footer className="px-6 py-6 text-center">
         <p className="text-[11px] text-zinc-400">
-          Built for Allo Health Engineering Exercise · 2024
+          Built for Allo Health Engineering Exercise
         </p>
       </footer>
     </main>

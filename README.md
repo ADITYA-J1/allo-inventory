@@ -1,6 +1,6 @@
 # Allo Inventory — Reservation System
 
-**Live:** [https://allo-inventory.vercel.app](https://allo-inventory-app.vercel.app/)
+**Live demo:** https://allo-inventory-app.vercel.app
 
 ---
 
@@ -9,18 +9,40 @@
 ```bash
 npm install
 cp .env.example .env.local
-# Fill in the values in .env.local
+# Fill in the five values in .env.local
 npx prisma db push
 npx prisma db seed
 npm run dev
 ```
 
-Required environment variables (see `.env.example`):
-- `DATABASE_URL` — Supabase transaction pooler URI
-- `DIRECT_URL` — Supabase direct connection URI
-- `UPSTASH_REDIS_REST_URL`
-- `UPSTASH_REDIS_REST_TOKEN`
-- `CRON_SECRET`
+Environment variables required (see `.env.example`):
+
+| Variable | Purpose |
+|----------|---------|
+| `DATABASE_URL` | Supabase transaction pooler URI (port 6543) |
+| `DIRECT_URL` | Supabase session pooler URI (port 5432) |
+| `UPSTASH_REDIS_REST_URL` | Upstash Redis REST endpoint |
+| `UPSTASH_REDIS_REST_TOKEN` | Upstash Redis auth token |
+| `CRON_SECRET` | Bearer token for the expiry cron route |
+
+---
+
+## What's Built
+
+A Next.js full-stack inventory reservation system. When a customer reaches checkout, units are held for 10 minutes. If payment succeeds the hold converts to a confirmed sale. If it fails or times out, the units return to available stock automatically.
+
+**Stack:** Next.js 14 App Router · TypeScript · Prisma · Supabase Postgres · Upstash Redis · Tailwind · shadcn/ui · Vercel
+
+### API
+
+| Method | Path | Behaviour |
+|--------|------|-----------|
+| GET | `/api/products` | Products with available stock per warehouse |
+| GET | `/api/warehouses` | All warehouses |
+| POST | `/api/reservations` | Reserve units — 409 if stock insufficient |
+| POST | `/api/reservations/:id/confirm` | Confirm reservation — 410 if expired |
+| POST | `/api/reservations/:id/release` | Release reservation early |
+| GET | `/api/cron/expire-reservations` | Auto-expiry (called by Vercel Cron) |
 
 ---
 
@@ -28,58 +50,47 @@ Required environment variables (see `.env.example`):
 
 ### Concurrency Safety
 
-The reservation endpoint uses PostgreSQL's `SELECT ... FOR UPDATE` inside a CTE.
-The availability check and the stock increment happen in a single atomic SQL
-statement. When two requests arrive simultaneously for the last unit:
+The reservation endpoint uses a Prisma `$transaction` at `Serializable` isolation level. Inside the transaction, we read the current stock, check availability, and increment `reserved` — all atomically. When two requests arrive simultaneously for the last unit:
 
-1. Request A acquires the row-level lock on `Stock`
-2. Request B blocks, waiting for the lock
-3. Request A increments `reserved`, commits, releases the lock
-4. Request B evaluates the `WHERE (total - reserved) >= quantity` clause
-   against the now-updated row — it fails, the CTE returns `success = false`
-5. Request B receives a clean 409
+1. Request A enters the transaction and reads stock
+2. Request B enters and reads the same stock
+3. One transaction commits first — the other detects the write conflict on commit and is rolled back by Postgres
+4. The rolled-back request returns a clean 409
 
-No application-level race condition is possible. The guarantee lives entirely
-inside Postgres.
+The guarantee lives inside Postgres. No application-level check can be tricked by a race condition because the database serialises conflicting writes.
 
-The implementation was validated by forcing inventory availability to a single
-unit and issuing simultaneous reservation requests from multiple clients. Exactly
-one request succeeded while the other returned HTTP 409 Conflict.
+The implementation was validated by setting Delhi Central stock for Minoxidil 5% Foam to a single unit and submitting simultaneous reserve requests from two browser tabs. One received the reservation page; the other received a 409 "Not enough stock" toast.
 
-### Expiry Mechanism
-
-A Vercel Cron job periodically calls `/api/cron/expire-reservations` to release
-expired reservations and decrement reserved stock. Due to hobby-tier compute
-constraints, the cron is currently configured to run daily at midnight instead of
-every minute. To avoid poor UX during the gap window, the system also implements
-lazy expiry checks during confirm/release operations and disables actions
-client-side when the countdown reaches zero.
-
-### Idempotency (Bonus)
-
-`POST /api/reservations` accepts an `Idempotency-Key` header. The key and
-serialised response are stored in Upstash Redis with a 24-hour TTL. Retries
-with the same key return the original response without re-executing the side
-effect — safe for clients on flaky connections.
-
----
-
-## Reservation Lifecycle
+### Reservation Lifecycle
 
 ```
 PENDING
-  → CONFIRMED  (user confirms purchase)
+  → CONFIRMED  (user confirms purchase within the window)
   → RELEASED   (user cancels)
-  → RELEASED   (expiry cleanup via cron or lazy check on confirm/release)
+  → RELEASED   (automatic expiry via cron or lazy check)
 ```
+
+### Expiry
+
+A Vercel Cron job calls `/api/cron/expire-reservations` on a schedule. It finds all PENDING reservations past their `expiresAt`, marks them RELEASED, and decrements `Stock.reserved` — all inside a single transaction.
+
+On the Hobby plan, Vercel Cron runs at most once per day (configured at midnight). To avoid holding stock in limbo until then, two additional safety nets are in place:
+
+- **Lazy expiry on read**: the confirm and release endpoints check `expiresAt` before acting. If expired, they release the stock immediately and return 410.
+- **Client-side countdown**: the reservation page runs a `setInterval` countdown. When it hits zero, the action buttons disable instantly — the user never needs to wait for the cron.
+
+### Idempotency (Bonus)
+
+`POST /api/reservations` accepts an `Idempotency-Key` header. Before processing, we check Upstash Redis for that key. If found, we return the cached response immediately without touching the database. If not found, we process normally and cache the response with a 24-hour TTL. This makes retries safe on flaky connections — the side effect runs exactly once.
 
 ---
 
 ## Trade-offs
 
-- **Cron granularity & Lazy Expiry**: The cron is configured to run daily at midnight instead of every minute to reduce compute costs. To compensate, we implemented **lazy expiry**: if a user tries to confirm or release an expired reservation, the API detects it, releases the stock immediately, and returns a 410 response. The client-side countdown also hits zero and disables UI actions without waiting for the cron. The only gap is that expired reservations won't release their stock back to the pool until midnight if no one touches them. For a take-home exercise, this is an acceptable trade-off between strict consistency and platform limits.
-- **Optimistic UI**: State updates after confirm/release are currently driven by
-  the API response. With more time I'd add optimistic updates via SWR.
-- **DB lock vs Redis lock**: I chose `FOR UPDATE` over a Redis distributed lock
-  because it keeps the atomicity guarantee within the same transaction boundary
-  as the data write — one fewer distributed failure mode.
+**Serializable vs FOR UPDATE** — I initially wrote the concurrency guard as a `SELECT ... FOR UPDATE` CTE. Supabase's transaction pooler (PgBouncer in transaction mode) doesn't support statement-level locking across round-trips, so I switched to `Serializable` isolation. This gives the same guarantee: conflicting concurrent writes are detected and one is rolled back. The trade-off is slightly higher abort rate under heavy contention, which is acceptable for this use case.
+
+**Cron granularity** — Daily cron means expired reservations can hold stock for up to 24 hours if nobody touches them. The lazy-expiry pattern on the API routes closes most of this gap in practice. With a Pro plan the cron would run every minute.
+
+**Optimistic UI** — Confirm and cancel update state from the API response rather than optimistically. With more time I'd use SWR's mutate for instant feedback before the round-trip completes.
+
+**No auth** — The system has no user authentication. In production, reservation ownership would be tied to a user session so users can only confirm or release their own reservations.
